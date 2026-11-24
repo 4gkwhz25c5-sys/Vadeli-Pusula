@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vadeli Pusula</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Düzen: üstte özet şeridi, ortada Trend Pusulası tarzı tablo, altta canlı likidasyon akışı ve kaynaklar */
+:root {
+  --bg: #eef1ef; --panel: #ffffff; --fg: #1d2622; --muted: #5d6b65; --line: #d5ddd9;
+  --head: #5f7369; --head-fg: #f3f6f4;
+  --up2: #23875a; --up1: #58a87e; --warn: #d4900f; --dn1: #d0675f; --dn2: #c9443a; --info: #3d78c7; --neutral: #8d9993;
+  --cell-fg: #ffffff; --soft: #e4e9e6;
+  --font-ui: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121715; --panel: #1a211e; --fg: #e3eae6; --muted: #93a39b; --line: #2b3531;
+    --head: #3e4d46; --head-fg: #e8efeb; --neutral: #55625c; --soft: #232c28; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--font-ui); }
+.wrap { max-width: 1280px; margin: 0 auto; padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; }
+.wrap > * { min-width: 0; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+h1 { font-size: 20px; margin: 0; font-weight: 600; letter-spacing: .01em; }
+h1 small { font-weight: 400; color: var(--muted); font-size: 14px; margin-left: 6px; }
+h2 { font-size: 13px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.status { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 13px; }
+button { font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button:focus-visible, summary:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; min-width: 0; }
+.stat .k { font-size: 12px; color: var(--muted); }
+.stat .v { font-family: var(--font-num); font-size: 20px; font-weight: 500; margin-top: 2px; }
+.stat .s { font-size: 12px; color: var(--muted); font-family: var(--font-num); }
+.pos { color: var(--up2); } .neg { color: var(--dn2); }
+
+.tablebox { overflow-x: auto; border-radius: 6px; }
+table.pusula { border-collapse: separate; border-spacing: 2px; width: 100%; min-width: 860px; font-size: 13px; }
+.pusula th { background: var(--head); color: var(--head-fg); font-weight: 600; padding: 7px 8px; text-align: center; white-space: nowrap; }
+.pusula td { padding: 7px 8px; text-align: center; color: var(--cell-fg); background: var(--neutral); white-space: nowrap; }
+.pusula td.tf { background: var(--head); color: var(--head-fg); font-weight: 600; }
+.pusula td.big { white-space: normal; min-width: 190px; font-weight: 500; }
+.pusula td small { opacity: .85; font-family: var(--font-num); font-size: 11.5px; }
+.c-up2 { background: var(--up2) !important; } .c-up1 { background: var(--up1) !important; }
+.c-warn { background: var(--warn) !important; } .c-dn1 { background: var(--dn1) !important; }
+.c-dn2 { background: var(--dn2) !important; } .c-info { background: var(--info) !important; }
+.c-neutral { background: var(--neutral) !important; }
+.why { display: block; font-size: 11.5px; font-weight: 400; opacity: .9; margin-top: 2px; }
+
+.cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-width: 0; }
+.liqsum { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 10px; font-size: 13px; }
+.feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 340px; overflow-y: auto; }
+.feed li { display: grid; grid-template-columns: 64px 70px 1fr auto; gap: 8px; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; align-items: center; }
+.feed li:nth-child(odd) { background: var(--soft); }
+.feed .side-long { color: var(--dn2); font-weight: 600; }
+.feed .side-short { color: var(--up2); font-weight: 600; }
+.feed .big { font-weight: 700; }
+.empty { color: var(--muted); font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; background: var(--soft); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neutral); }
+.dot.ok { background: var(--up2); } .dot.part { background: var(--warn); } .dot.off { background: var(--dn2); }
+.note { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+.alert { border-left: 3px solid var(--warn); background: var(--panel); padding: 10px 14px; border-radius: 4px; font-size: 13px; }
+.hgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 10px; }
+.hcard { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; min-width: 0; background: var(--bg); }
+.hcard .k { font-size: 12px; color: var(--muted); }
+.hcard .v { font-family: var(--font-num); font-size: 20px; font-weight: 500; margin-top: 2px; }
+.hcard .s { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.pill { display: inline-block; padding: 2px 10px; border-radius: 999px; color: var(--cell-fg); font-weight: 600; font-size: 14px; }
+.chartbox { margin-top: 14px; }
+.chartbox svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.ax { fill: var(--muted); font: 10.5px var(--font-num); }
+.grid { stroke: var(--line); stroke-width: 1; }
+.tables2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; margin-top: 14px; }
+.tables2 > div { min-width: 0; overflow-x: auto; }
+table.bt { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.bt caption { text-align: left; font-weight: 600; font-size: 13px; padding-bottom: 6px; }
+.bt th { text-align: right; font-weight: 500; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.bt th:first-child, .bt td:first-child { text-align: left; }
+.bt td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--line); font-family: var(--font-num); white-space: nowrap; }
+.bt tr.now td { background: var(--soft); font-weight: 600; }
+.bt tr.base td { color: var(--muted); }
+details.help { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+details.help summary { cursor: pointer; font-weight: 600; }
+details.help dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 12px 0 0; font-size: 13px; }
+details.help dt { font-weight: 600; }
+details.help dd { margin: 0; color: var(--muted); max-width: 80ch; }
+@media (max-width: 600px) { details.help dl { grid-template-columns: 1fr; } details.help dd { margin-bottom: 6px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Vadeli Pusula <small>BTC/USDT · vadeli piyasa analizi</small></h1>
+    <div class="status"><span id="updated">Yükleniyor…</span><button id="refresh" type="button">Yenile</button></div>
+  </header>
+
+  <div id="alertbox" hidden></div>
+
+  <section class="stats" id="stats" aria-label="Özet"></section>
+
+  <section>
+    <div class="tablebox">
+      <table class="pusula" aria-label="Zaman dilimlerine göre analiz">
+        <thead><tr>
+          <th>Zaman dilimi</th><th>Fiyat</th><th>Fiyat / OI</th><th>Taker (vadeli)</th><th>Spot / Vadeli</th>
+          <th>Funding</th><th>Long/Short</th><th>Likidasyon</th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="8" class="c-neutral">Veriler yükleniyor…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note">Bu tablo piyasanın şu anki durumunu betimler, yön tahmini yapmaz. Değişimler son 3 mum üzerinden ölçülür (1s: 3 saat, 4s: 12 saat, Günlük: 3 gün). σ değerleri z-score'dur: o zaman dilimindeki yaklaşık son 200 mumun ortalamasından kaç standart sapma uzakta olduğunu gösterir.</p>
+  </section>
+
+  <section class="card" aria-label="Tarihsel konum">
+    <h2>Tarihsel konum ve sert hareket uyarısı</h2>
+    <div class="hgrid" id="histcards"><p class="empty">Tarihsel veri yükleniyor…</p></div>
+    <div class="chartbox" id="histchart"></div>
+    <div class="tables2" id="histtables"></div>
+    <p class="note" id="histnote"></p>
+  </section>
+
+  <div class="cols">
+    <section class="card">
+      <h2>Canlı likidasyonlar</h2>
+      <div class="liqsum" id="liqsum"></div>
+      <ul class="feed" id="feed"><li class="empty">Akış bekleniyor…</li></ul>
+      <p class="note">Kırmızı: tasfiye olan long pozisyon (satış baskısı). Yeşil: tasfiye olan short pozisyon (alış baskısı). Listede 1 bin $ üstü işlemler gösterilir, toplamlara hepsi dahildir. Kalın satırlar 250 bin $ üstü. Borsalar yoğun anlarda her likidasyonu yayınlamadığı için toplamlar gerçek değerin altında kalabilir.</p>
+    </section>
+    <section class="card">
+      <h2>Veri kaynakları</h2>
+      <div class="chips" id="sources"></div>
+      <p class="note" id="srcnote"></p>
+    </section>
+  </div>
+
+  <details class="help">
+    <summary>Tablo nasıl okunur?</summary>
+    <dl>
+      <dt>Fiyat / OI</dt><dd>Fiyat ve açık pozisyon (OI) birlikte nasıl değişiyor. Fiyat ↑ OI ↑: yeni long girişi. Fiyat ↑ OI ↓: short kapatma. Fiyat ↓ OI ↑: yeni short girişi. Fiyat ↓ OI ↓: long tasfiyesi. Fiyat yatay OI ↑: pozisyon birikiyor.</dd>
+      <dt>Taker (vadeli)</dt><dd>Vadelide piyasa emriyle alanların payı. Agresif alıcı mı, agresif satıcı mı baskın?</dd>
+      <dt>Spot / Vadeli</dt><dd>Hareketi gerçek alım-satım mı (spot), yoksa kaldıraç mı (vadeli) taşıyor? Bu bir betimlemedir: geçmiş testte hangisinin taşıdığı, hareketin devam edip etmeyeceğini güvenilir şekilde göstermedi.</dd>
+      <dt>Funding</dt><dd>Borsaların OI ağırlıklı ortalaması, 8 saatlik eşdeğere çevrilmiş. Yüksek pozitif değer longların, negatif değer shortların fazla olduğunu gösterir. Kalabalık tarafın kaybedeceği fikri geçmiş testte güvenilir bir yön sinyali vermedi.</dd>
+      <dt>Long/Short</dt><dd>Long pozisyondaki hesapların shortlara oranı. Her borsanın kendi geçmişine göre z-score'u alınıp birleştirilir, çünkü borsalar arasında oranlar çok farklı.</dd>
+      <dt>Likidasyon</dt><dd>Son 3 mumda tasfiye olan long ve short pozisyonlar. Binance, Bybit ve OKX verisi Coinalyze'dan, Gate verisi doğrudan gelir. Olağan dışı yükselince renklenir.</dd>
+      <dt>Sert hareket uyarısı</dt><dd>Paneldeki tek tahmin. Yönü değil, büyüklüğü söyler: kaldıraç son 1 yılın %90 diliminin üstündeyken sonraki 14 günde ≥%10 hareket belirgin şekilde daha sık görüldü. Dayandığı geçmiş testi tarihsel bölümdeki tablolardadır.</dd>
+    </dl>
+    <p class="note">Renkler: yeşil ve kırmızı yalnızca gerçekleşmiş fiyat veya akış yönünü, mavi olağan dışı ölçümleri gösterir; iyi/kötü yargısı taşımaz. Yön tahmini, geçmiş testlerde (1, 3, 7 ve 14 gün) güvenilir çıkmadığı için panelde yoktur. 1 ve 4 saatlik ufuklar yeterli veri olmadığı için test edilemedi.</p>
+  </details>
+</div>
+
+<script>
+"use strict";
+// ---------- ayarlar ----------
+const K = 3;                       // değişim penceresi (mum)
+const ZT = 0.5;                    // anlamlılık eşiği (σ)
+const H8 = 8 * 3600e3;
+const REFRESH_MS = 60e3;
+const TFS = {
+  "1d": { label: "Günlük", okx: "1D" },
+  "4h": { label: "4 saatlik", okx: "4H" },
+  "1h": { label: "1 saatlik", okx: "1H" },
+};
+const ORDER = ["1d", "4h", "1h"];
+const OKX = "https://www.okx.com", GATE = "https://api.gateio.ws/api/v4", BG = "https://api.bitget.com",
+      BNF = "https://fapi.binance.com", BNS = "https://data-api.binance.vision", BY = "https://api.bybit.com";
+
+// ---------- kaynak durumu ----------
+const SRC = {
+  binance: { name: "Binance", parts: {} }, bybit: { name: "Bybit", parts: {} }, okx: { name: "OKX", parts: {} },
+  gate: { name: "Gate", parts: {} }, bitget: { name: "Bitget", parts: {} }, hyperliquid: { name: "Hyperliquid", parts: {} },
+  deribit: { name: "Deribit", parts: {} }, binanceSpot: { name: "Binance Spot", parts: {} },
+  coinalyze: { name: "Coinalyze", parts: {} },
+};
+const WSS = {};
+
+// ---------- yardımcılar ----------
+const $ = id => document.getElementById(id);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const mean = a => a.reduce((s, x) => s + x, 0) / a.length;
+const std = (a, m) => Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / Math.max(1, a.length - 1));
+const last = a => a[a.length - 1];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function getJ(url, opt = {}) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), 12000);
+  try {
+    const r = await fetch(url, { ...opt, signal: ac.signal });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+const hl = body => getJ("https://api.hyperliquid.xyz/info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+async function tryGet(src, part, fn) {
+  try { const v = await fn(); if (v == null || (Array.isArray(v) && !v.length)) throw new Error("boş"); SRC[src].parts[part] = true; return v; }
+  catch (e) { SRC[src].parts[part] = false; return null; }
+}
+
+// son değerin önceki değerlere göre z-score'u
+function zLast(series, minN = 15) {
+  if (!series || series.length < minN + 1) return null;
+  const prior = series.slice(0, -1), m = mean(prior), s = std(prior, m);
+  if (!s || !isFinite(s)) return 0;
+  return clamp((last(series) - m) / s, -6, 6);
+}
+function kChanges(v, k = K) { const o = []; for (let i = k; i < v.length; i++) if (v[i - k] > 0) o.push(v[i] / v[i - k] - 1); return o; }
+function kSums(v, k = K) { const o = []; for (let i = k - 1; i < v.length; i++) { let s = 0; for (let j = i - k + 1; j <= i; j++) s += v[j]; o.push(s); } return o; }
+function kShares(b, s) { const B = kSums(b), S = kSums(s); return B.map((x, i) => (x + S[i]) > 0 ? x / (x + S[i]) : 0.5); }
+function kNets(b, s) { const B = kSums(b), S = kSums(s); return B.map((x, i) => x - S[i]); }
+function wcombine(items) {
+  const ok = items.filter(x => x && x.z != null && isFinite(x.z) && isFinite(x.val));
+  if (!ok.length) return null;
+  const W = ok.reduce((a, x) => a + x.w, 0) || 1;
+  return { z: ok.reduce((a, x) => a + x.w * x.z, 0) / W, val: ok.reduce((a, x) => a + x.w * x.val, 0) / W, names: ok.map(x => x.name) };
+}
+
+const fmtUsd = n => { if (n == null || !isFinite(n)) return "–"; const a = Math.abs(n);
+  return a >= 1e9 ? "$" + (n / 1e9).toFixed(2) + "B" : a >= 1e6 ? "$" + (n / 1e6).toFixed(1) + "M" : a >= 1e3 ? "$" + (n / 1e3).toFixed(0) + "K" : "$" + n.toFixed(0); };
+const fmtPct = (n, d = 2) => n == null || !isFinite(n) ? "–" : (n > 0 ? "+" : "") + (n * 100).toFixed(d) + "%";
+const fmtZ = z => z == null ? "veri az" : (z > 0 ? "+" : "") + z.toFixed(1) + "σ";
+const fmtFund = r => r == null ? "–" : (r * 100).toFixed(4) + "%";
+const fmtTime = t => new Date(t).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+// ---------- Coinalyze (yerel sunucu üzerinden; anahtar sunucuda kalır) ----------
+// Ücretsiz plan dakikada ~40 sembol sorgusuna izin veriyor; bu yüzden her veri seti kendi süresi kadar önbellekte tutulur.
+const CZ = { bn: "BTCUSDT_PERP.A", by: "BTCUSDT.6", okx: "BTCUSDT_PERP.3" };
+const CZN = { bn: "Binance", by: "Bybit", okx: "OKX" }, CZW = { bn: "binance", by: "bybit", okx: "okx" };
+const CZ_ALL = Object.values(CZ).join(","), CZ_BB = [CZ.bn, CZ.by].join(",");
+const CZ_CACHE = new Map();
+let CZ_ON = null;
+async function czAvailable() {
+  if (CZ_ON !== null) return CZ_ON;
+  if (location.protocol === "file:") return (CZ_ON = false);
+  try { CZ_ON = !!(await getJ("/coinalyze-status")).key; } catch (e) { CZ_ON = false; }
+  return CZ_ON;
+}
+async function czGet(key, path, ttl) {
+  const hit = CZ_CACHE.get(key);
+  if (hit && Date.now() - hit.t < ttl) return hit.data;
+  try { const data = await getJ("/coinalyze/" + path); CZ_CACHE.set(key, { t: Date.now(), data }); return data; }
+  catch (e) { if (hit) return hit.data; throw e; }   // limit aşılırsa son alınan veriyi kullan
+}
+const czMap = arr => Object.fromEntries((arr || []).map(x => [x.symbol, x.history ?? x.value]));
+function bucketize(a, sec, mode) {
+  const m = new Map();
+  for (const x of a) {
+    const b = Math.floor(x.t / sec) * sec, e = m.get(b);
+    if (!e || mode === "last") m.set(b, { ...x, t: b });
+    else for (const k in x) if (k !== "t" && typeof x[k] === "number") e[k] = (e[k] || 0) + x[k];
+  }
+  return [...m.values()].sort((p, q) => p.t - q.t);
+}
+async function loadCZ() {
+  const now = Math.floor(Date.now() / 1000), H = 820 * 3600, DY = 220 * 86400, M2 = 120e3, M15 = 900e3;
+  const q = (key, part, path, ttl) => tryGet("coinalyze", part, () => czGet(key, path, ttl));
+  // günlük sorgular uzun pencereyle yapılır; tarihsel katman ve yön modeli aynı veriyi ek sorgu harcamadan kullanır
+  const h = `interval=1hour&from=${now - H}&to=${now}`, dd = `interval=daily&from=${now - 1700 * 86400}&to=${now}`;
+  const [oiH, liqH, lsH, kH, oiD, liqD, lsD, kD, frH, frNow] = await Promise.all([
+    q("oiH", "OI geçmişi", `open-interest-history?symbols=${CZ_ALL}&${h}`, M2),
+    q("liqH", "likidasyon geçmişi", `liquidation-history?symbols=${CZ_ALL}&${h}&convert_to_usd=true`, M2),
+    q("lsH", "L/S", `long-short-ratio-history?symbols=${CZ_BB}&${h}`, M2),
+    q("kH", "taker", `ohlcv-history?symbols=${CZ_BB}&${h}`, M2),
+    q("oiD", "OI geçmişi (günlük)", `open-interest-history?symbols=${CZ_ALL}&${dd}`, M15),
+    q("liqD", "likidasyon geçmişi (günlük)", `liquidation-history?symbols=${CZ_ALL}&${dd}&convert_to_usd=true`, M15),
+    q("lsD", "L/S (günlük)", `long-short-ratio-history?symbols=${CZ_BB}&${dd}`, M15),
+    q("kD", "taker (günlük)", `ohlcv-history?symbols=${CZ_BB}&${dd}`, M15),
+    q("frH", "funding geçmişi", `funding-rate-history?symbols=${CZ_BB}&interval=4hour&from=${now - 31 * 86400}&to=${now}`, M15),
+    q("frNow", "funding", `funding-rate?symbols=${CZ_BB}`, M2),
+  ]);
+  return { oiH, liqH, lsH, kH, oiD, liqD, lsD, kD, frH, frNow };
+}
+function applyCZ(d, cz) {
+  if (!cz) return;
+  const hourly = { oi: czMap(cz.oiH), liq: czMap(cz.liqH), ls: czMap(cz.lsH), k: czMap(cz.kH) };
+  const T = { "1h": { ...hourly, sec: 0 }, "4h": { ...hourly, sec: 14400 },
+              "1d": { oi: czMap(cz.oiD), liq: czMap(cz.liqD), ls: czMap(cz.lsD), k: czMap(cz.kD), sec: 0 } };
+  for (const tf of ORDER) {
+    const t = T[tf], P = d.per[tf];
+    const prep = (hst, mode) => { if (!hst || !hst.length) return null; let a = [...hst].sort((x, y) => x.t - y.t); if (t.sec) a = bucketize(a, t.sec, mode); return a.slice(-200); };
+    P.czOI = {}; P.czLS = {}; P.czK = {}; P.czLiq = new Map();
+    for (const k in CZ) { const a = prep(t.oi[CZ[k]], "last"); if (a) P.czOI[k] = a.map(x => x.c); }
+    for (const k of ["bn", "by"]) {
+      const a = prep(t.ls[CZ[k]], "last"); if (a) P.czLS[k] = a.map(x => x.r);
+      const b = prep(t.k[CZ[k]], "sum"); if (b) P.czK[k] = b.map(x => ({ v: x.v, tb: x.bv }));
+    }
+    for (const k in CZ) (prep(t.liq[CZ[k]], "sum") || []).forEach(x => { const e = P.czLiq.get(x.t) || { l: 0, s: 0 }; e.l += x.l || 0; e.s += x.s || 0; P.czLiq.set(x.t, e); });
+  }
+  const lastOI = k => { const a = d.per["1h"].czOI[k]; return a && a.length ? last(a) : null; };
+  const fn = czMap(cz.frNow), fh = czMap(cz.frH);
+  const toFH = hst => hst && hst.length ? hst.map(x => ({ t: x.t * 1000, r: x.c / 100, ih: 8 })) : null;
+  if (lastOI("bn")) { d.bnOI = lastOI("bn"); d.bnFR = fn[CZ.bn] != null ? fn[CZ.bn] / 100 : null; d.bnFH = toFH(fh[CZ.bn]); }
+  if (lastOI("by")) { d.byT = { oi: lastOI("by"), fr: fn[CZ.by] != null ? fn[CZ.by] / 100 : null }; d.byFH = toFH(fh[CZ.by]); }
+  SRC.binance.parts["Coinalyze üzerinden"] = !!d.bnOI;
+  SRC.bybit.parts["Coinalyze üzerinden"] = !!d.byT;
+}
+
+// ---------- veri toplama ----------
+let D = null;
+async function loadAll() {
+  for (const k in SRC) SRC[k].parts = {};
+  const czOn = await czAvailable();
+  const czP = czOn ? loadCZ() : Promise.resolve(null);
+  const direct = !czOn;   // Coinalyze varsa Binance/Bybit'e doğrudan bağlanmayı deneme
+  const J = {};
+  // anlık: OI + funding
+  J.okxOI = tryGet("okx", "OI", async () => +(await getJ(OKX + "/api/v5/public/open-interest?instType=SWAP&instId=BTC-USDT-SWAP")).data[0].oiCcy);
+  J.okxFR = tryGet("okx", "funding", async () => { const d = (await getJ(OKX + "/api/v5/public/funding-rate?instId=BTC-USDT-SWAP")).data[0];
+    const ih = (+d.nextFundingTime - +d.fundingTime) / 3600e3 || 8; return +d.fundingRate * 8 / ih; });
+  J.okxFH = tryGet("okx", "funding geçmişi", async () => (await getJ(OKX + "/api/v5/public/funding-rate-history?instId=BTC-USDT-SWAP&limit=100")).data.map(d => ({ t: +d.fundingTime, r: +d.fundingRate })));
+  J.okxLiq = tryGet("okx", "likidasyon", async () => { const d = (await getJ(OKX + "/api/v5/public/liquidation-orders?instType=SWAP&instFamily=BTC-USDT&state=filled&limit=100")).data;
+    return d.flatMap(x => (x.details || []).map(y => ({ ex: "OKX", t: +y.ts, side: y.side === "sell" ? "long" : "short", btc: +y.sz * 0.01, px: +y.bkPx }))); });
+  J.gateC = tryGet("gate", "OI", async () => { const d = await getJ(GATE + "/futures/usdt/contracts/BTC_USDT"); const m = +d.quanto_multiplier;
+    return { oi: +d.position_size * m, fr: +d.funding_rate * 8 * 3600 / (+d.funding_interval || 28800), mult: m }; });
+  J.gateFH = tryGet("gate", "funding geçmişi", async () => (await getJ(GATE + "/futures/usdt/funding_rate?contract=BTC_USDT&limit=100")).map(x => ({ t: x.t * 1000, r: +x.r })));
+  J.bgOI = tryGet("bitget", "OI", async () => +(await getJ(BG + "/api/v2/mix/market/open-interest?symbol=BTCUSDT&productType=usdt-futures")).data.openInterestList[0].size);
+  J.bgFR = tryGet("bitget", "funding", async () => { const d = (await getJ(BG + "/api/v2/mix/market/current-fund-rate?symbol=BTCUSDT&productType=usdt-futures")).data[0];
+    return +d.fundingRate * 8 / (+d.fundingRateInterval || 8); });
+  J.bgFH = tryGet("bitget", "funding geçmişi", async () => (await getJ(BG + "/api/v2/mix/market/history-fund-rate?symbol=BTCUSDT&productType=usdt-futures&pageSize=100")).data.map(d => ({ t: +d.fundingTime, r: +d.fundingRate })));
+  J.hl = tryGet("hyperliquid", "OI + funding", async () => { const [meta, ctx] = await hl({ type: "metaAndAssetCtxs" });
+    const i = meta.universe.findIndex(u => u.name === "BTC"); const c = ctx[i]; return { oi: +c.openInterest, fr: +c.funding * 8, px: +c.markPx }; });
+  J.hlFH = tryGet("hyperliquid", "funding geçmişi", async () => { let start = Date.now() - 31 * 86400e3, out = [];
+    for (let n = 0; n < 3; n++) { const r = await hl({ type: "fundingHistory", coin: "BTC", startTime: start }); out = out.concat(r); if (r.length < 500) break; start = last(r).time + 1; }
+    return out.map(x => ({ t: x.time, r: +x.fundingRate })); });
+  J.der = tryGet("deribit", "OI", async () => { const d = (await getJ("https://www.deribit.com/api/v2/public/get_book_summary_by_instrument?instrument_name=BTC-PERPETUAL")).result[0];
+    return { oi: d.open_interest / d.mark_price }; });
+  if (direct) {
+  J.bnOI = tryGet("binance", "OI", async () => +(await getJ(BNF + "/fapi/v1/openInterest?symbol=BTCUSDT")).openInterest);
+  J.bnFR = tryGet("binance", "funding", async () => +(await getJ(BNF + "/fapi/v1/premiumIndex?symbol=BTCUSDT")).lastFundingRate);
+  J.bnFH = tryGet("binance", "funding geçmişi", async () => (await getJ(BNF + "/fapi/v1/fundingRate?symbol=BTCUSDT&limit=100")).map(d => ({ t: d.fundingTime, r: +d.fundingRate })));
+  J.byT = tryGet("bybit", "OI + funding", async () => { const d = (await getJ(BY + "/v5/market/tickers?category=linear&symbol=BTCUSDT")).result.list[0];
+    return { oi: +d.openInterest, fr: +d.fundingRate * 8 / (+d.fundingIntervalHour || 8) }; });
+  J.byFH = tryGet("bybit", "funding geçmişi", async () => (await getJ(BY + "/v5/market/funding/history?category=linear&symbol=BTCUSDT&limit=100")).result.list.map(d => ({ t: +d.fundingRateTimestamp, r: +d.fundingRate })));
+  }
+
+  // zaman dilimi başına geçmiş
+  const per = {};
+  for (const tf of ORDER) {
+    per[tf] = {
+      spot: tryGet("binanceSpot", "fiyat + spot taker", async () => (await getJ(`${BNS}/api/v3/klines?symbol=BTCUSDT&interval=${tf}&limit=200`))
+        .map(k => ({ t: k[0], c: +k[4], v: +k[5], tb: +k[9] }))),
+      gate: tryGet("gate", "geçmiş (OI, L/S, taker, likidasyon)", async () => (await getJ(`${GATE}/futures/usdt/contract_stats?contract=BTC_USDT&interval=${tf}&limit=200`)).sort((a, b) => a.time - b.time)),
+      bnOI: !direct ? null : tryGet("binance", "OI geçmişi", async () => (await getJ(`${BNF}/futures/data/openInterestHist?symbol=BTCUSDT&period=${tf}&limit=200`)).map(d => +d.sumOpenInterest)),
+      bnLS: !direct ? null : tryGet("binance", "L/S", async () => (await getJ(`${BNF}/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=${tf}&limit=200`)).map(d => +d.longShortRatio)),
+      bnK: !direct ? null : tryGet("binance", "taker", async () => (await getJ(`${BNF}/fapi/v1/klines?symbol=BTCUSDT&interval=${tf}&limit=200`)).map(k => ({ v: +k[5], tb: +k[9] }))),
+      byOI: !direct ? null : tryGet("bybit", "OI geçmişi", async () => (await getJ(`${BY}/v5/market/open-interest?category=linear&symbol=BTCUSDT&intervalTime=${tf}&limit=200`)).result.list
+        .sort((a, b) => a.timestamp - b.timestamp).map(d => +d.openInterest)),
+      byLS: !direct ? null : tryGet("bybit", "L/S", async () => (await getJ(`${BY}/v5/market/account-ratio?category=linear&symbol=BTCUSDT&period=${tf}&limit=200`)).result.list
+        .sort((a, b) => a.timestamp - b.timestamp).map(d => +d.buyRatio / Math.max(1e-9, +d.sellRatio))),
+      bgLS: tf === "1d" ? null : tryGet("bitget", "L/S", async () => (await getJ(`${BG}/api/v2/mix/market/account-long-short?symbol=BTCUSDT&period=${tf}`)).data
+        .sort((a, b) => a.ts - b.ts).map(d => +d.longShortAccountRatio)),
+      bgTk: tryGet("bitget", "taker", async () => (await getJ(`${BG}/api/v2/mix/market/taker-buy-sell?symbol=BTCUSDT&period=${tf}`)).data
+        .sort((a, b) => a.ts - b.ts).map(d => ({ b: +d.buyVolume, s: +d.sellVolume }))),
+    };
+  }
+  const out = {};
+  for (const k in J) out[k] = await J[k];
+  out.per = {};
+  for (const tf of ORDER) { out.per[tf] = {}; for (const k in per[tf]) out.per[tf][k] = await per[tf][k]; }
+  applyCZ(out, await czP);
+  return out;
+}
+
+// ---------- hesaplama ----------
+function weights(d) {
+  return {
+    okx: d.okxOI || 0, gate: d.gateC?.oi || 0, bitget: d.bgOI || 0, hyperliquid: d.hl?.oi || 0,
+    deribit: d.der?.oi || 0, binance: d.bnOI || 0, bybit: d.byT?.oi || 0,
+  };
+}
+
+// funding geçmişini 8 saatlik dilimlere çevir, OI ağırlıklı birleştir
+function fundingModel(d, W) {
+  const srcs = [
+    { key: "okx", hist: d.okxFH, cur: d.okxFR }, { key: "gate", hist: d.gateFH, cur: d.gateC?.fr },
+    { key: "bitget", hist: d.bgFH, cur: d.bgFR }, { key: "hyperliquid", hist: d.hlFH, cur: d.hl?.fr },
+    { key: "binance", hist: d.bnFH, cur: d.bnFR }, { key: "bybit", hist: d.byFH, cur: d.byT?.fr },
+  ].filter(s => s.hist && s.hist.length > 5 && s.cur != null && isFinite(s.cur) && W[s.key] > 0);
+  const slots = new Map();
+  for (const s of srcs) {
+    const h = [...s.hist].sort((a, b) => a.t - b.t);
+    const diffs = h.slice(1).map((x, i) => x.t - h[i].t).sort((a, b) => a - b);
+    const ih = h[0].ih || (diffs[Math.floor(diffs.length / 2)] || H8) / 3600e3;
+    const per = new Map();
+    for (const x of h) { const sl = Math.floor(x.t / H8); const a = per.get(sl) || []; a.push(x.r * 8 / ih); per.set(sl, a); }
+    for (const [sl, a] of per) { const e = slots.get(sl) || { s: 0, w: 0 }; e.s += W[s.key] * mean(a); e.w += W[s.key]; slots.set(sl, e); }
+  }
+  const nowSlot = Math.floor(Date.now() / H8);
+  const series = [...slots.entries()].filter(([sl]) => sl < nowSlot).sort((a, b) => a[0] - b[0]).slice(-90).map(([, e]) => e.s / e.w);
+  const Wt = srcs.reduce((a, s) => a + W[s.key], 0);
+  const cur = Wt ? srcs.reduce((a, s) => a + W[s.key] * s.cur, 0) / Wt : null;
+  return { series, cur, names: srcs.map(s => SRC[s.key].name) };
+}
+
+function fundingFor(tf, FM) {
+  if (FM.cur == null || FM.series.length < 10) return { val: FM.cur, z: null };
+  if (tf === "1d") {
+    const avg3 = []; for (let i = 2; i < FM.series.length; i++) avg3.push((FM.series[i] + FM.series[i - 1] + FM.series[i - 2]) / 3);
+    const v = (FM.cur + last(FM.series) + FM.series[FM.series.length - 2]) / 3;
+    return { val: v, z: zLast(avg3.concat([v]), 10) };
+  }
+  return { val: FM.cur, z: zLast(FM.series.concat([FM.cur]), 10) };
+}
+
+function computeRow(tf, d, W, FM) {
+  const P = d.per[tf], r = { tf };
+  const g = P.gate, mult = d.gateC?.mult || 0.0001;
+  // fiyat
+  const closes = P.spot ? P.spot.map(k => k.c) : g ? g.map(x => x.mark_price) : [];
+  const pc = kChanges(closes);
+  r.pChg = pc.length ? last(pc) : null; r.pZ = zLast(pc);
+  // OI
+  const oi = [];
+  if (g) { const ch = kChanges(g.map(x => x.open_interest)); oi.push({ name: "Gate", w: W.gate || 1, val: last(ch), z: zLast(ch) }); }
+  if (P.bnOI) { const ch = kChanges(P.bnOI); oi.push({ name: "Binance", w: W.binance || 1, val: last(ch), z: zLast(ch) }); }
+  if (P.byOI) { const ch = kChanges(P.byOI); oi.push({ name: "Bybit", w: W.bybit || 1, val: last(ch), z: zLast(ch) }); }
+  for (const [k, s] of Object.entries(P.czOI || {})) { const ch = kChanges(s); oi.push({ name: CZN[k], w: W[CZW[k]] || 1, val: last(ch), z: zLast(ch) }); }
+  r.oi = wcombine(oi);
+  // vadeli taker
+  const tk = [];
+  if (g) { const sh = kShares(g.map(x => x.long_taker_size), g.map(x => x.short_taker_size)); tk.push({ name: "Gate", w: W.gate || 1, val: last(sh), z: zLast(sh) }); }
+  if (P.bgTk && P.bgTk.length >= 20) { const sh = kShares(P.bgTk.map(x => x.b), P.bgTk.map(x => x.s)); tk.push({ name: "Bitget", w: W.bitget || 1, val: last(sh), z: zLast(sh, 12) }); }
+  if (P.bnK) { const sh = kShares(P.bnK.map(x => x.tb), P.bnK.map(x => x.v - x.tb)); tk.push({ name: "Binance", w: W.binance || 1, val: last(sh), z: zLast(sh) }); }
+  for (const [k, a] of Object.entries(P.czK || {})) { const sh = kShares(a.map(x => x.tb), a.map(x => x.v - x.tb)); tk.push({ name: CZN[k], w: W[CZW[k]] || 1, val: last(sh), z: zLast(sh) }); }
+  r.tk = wcombine(tk);
+  // spot taker
+  if (P.spot) { const sp = P.spot; const net = kNets(sp.map(k => k.tb), sp.map(k => k.v - k.tb)); const sh = kShares(sp.map(k => k.tb), sp.map(k => k.v - k.tb));
+    r.spot = { z: zLast(net), share: last(sh) }; }
+  // long/short
+  const ls = [];
+  if (g) { const s = g.map(x => x.lsr_account); ls.push({ name: "Gate", w: W.gate || 1, val: last(s), z: zLast(s) }); }
+  if (P.bgLS && P.bgLS.length >= 20) ls.push({ name: "Bitget", w: W.bitget || 1, val: last(P.bgLS), z: zLast(P.bgLS, 12) });
+  if (P.bnLS) ls.push({ name: "Binance", w: W.binance || 1, val: last(P.bnLS), z: zLast(P.bnLS) });
+  if (P.byLS) ls.push({ name: "Bybit", w: W.bybit || 1, val: last(P.byLS), z: zLast(P.byLS) });
+  for (const [k, s] of Object.entries(P.czLS || {})) ls.push({ name: CZN[k], w: W[CZW[k]] || 1, val: last(s), z: zLast(s) });
+  r.ls = wcombine(ls);
+  // likidasyon: Gate + Coinalyze (Binance, Bybit, OKX), mum zamanına göre toplanır
+  const lm = new Map([...(P.czLiq || [])].map(([t, e]) => [t, { ...e }]));
+  const liqNames = P.czLiq && P.czLiq.size ? ["Binance", "Bybit", "OKX"] : [];
+  if (g) { liqNames.push("Gate"); g.forEach(x => { const e = lm.get(x.time) || { l: 0, s: 0 }; e.l += +x.long_liq_usd || 0; e.s += +x.short_liq_usd || 0; lm.set(x.time, e); }); }
+  if (lm.size) {
+    const ks = [...lm.keys()].sort((a, b) => a - b).slice(-200);
+    const L = kSums(ks.map(t => lm.get(t).l)), S = kSums(ks.map(t => lm.get(t).s)), T = L.map((x, i) => x + S[i]);
+    r.liq = { long: last(L), short: last(S), z: zLast(T), names: liqNames };
+  }
+  // funding
+  r.fund = fundingFor(tf, FM);
+  interpret(r);
+  return r;
+}
+
+// ---------- yorum ----------
+function interpret(r) {
+  const pz = r.pZ ?? 0, oz = r.oi?.z ?? 0;
+  r.dir = pz > ZT ? "up" : pz < -ZT ? "down" : "flat";
+  const oiDir = oz > ZT ? "up" : oz < -ZT ? "down" : "flat";
+  const sgn = r.dir === "up" ? 1 : r.dir === "down" ? -1 : 0;
+
+  // Yalnızca betimleme: hücreler o anki durumu adlandırır, yön veya devam tahmini yapmaz
+  // (geçmiş testlerde bu ölçümlerin hiçbiri 1–14 günlük yönü güvenilir şekilde öngörmedi).
+  // Renkler: yeşil/kırmızı yalnızca gerçekleşmiş fiyat veya akış yönünü, mavi olağan dışı ölçümleri gösterir; iyi/kötü yargısı yoktur.
+  const REG = {
+    "up|up": "yeni long girişi", "up|down": "short kapatma", "up|flat": "OI yatay",
+    "down|up": "yeni short girişi", "down|down": "long tasfiyesi", "down|flat": "OI yatay",
+    "flat|up": "pozisyon birikiyor", "flat|down": "pozisyonlar kapanıyor", "flat|flat": "durgun",
+  };
+  const dirCls = r.dir === "up" ? "c-up1" : r.dir === "down" ? "c-dn1" : "c-neutral";
+  r.reg = r.oi ? { txt: REG[r.dir + "|" + oiDir], cls: r.dir === "flat" ? (oiDir === "up" ? "c-info" : "c-neutral") : dirCls }
+               : { txt: "OI verisi yok", cls: "c-neutral" };
+
+  // taker
+  const tz = r.tk?.z ?? 0;
+  const tkSide = tz > ZT ? 1 : tz < -ZT ? -1 : 0;
+  r.tkv = { txt: !r.tk ? "veri yok" : tkSide > 0 ? "alıcı baskın" : tkSide < 0 ? "satıcı baskın" : "dengeli",
+            cls: tkSide > 0 ? "c-up1" : tkSide < 0 ? "c-dn1" : "c-neutral" };
+
+  // spot / vadeli: hareketi hangi piyasanın akışı taşıyor
+  const sz = r.spot?.z, perp = r.tk?.z;
+  let sv = { txt: "veri yok", cls: "c-neutral" };
+  if (sz != null && perp != null) {
+    if (sgn) {
+      const s = sz * sgn, p = perp * sgn;            // hareket yönünde pozitif = o piyasanın akışı hareketle aynı yönde
+      sv = { cls: "c-neutral", txt: s > ZT && s >= p ? "spot öncü" : s > ZT && p > ZT ? "birlikte" : p > ZT && s <= 0 ? "vadeli öncü" : s < -ZT ? "spot ters yönde" : "belirgin değil" };
+    } else {
+      sv = sz > ZT ? { txt: "spot alıcı", cls: "c-up1" } : sz < -ZT ? { txt: "spot satıcı", cls: "c-dn1" } : { txt: "nötr", cls: "c-neutral" };
+    }
+  }
+  r.sv = sv;
+
+  // funding / L/S hücreleri: geçmişe göre ne kadar olağan dışı
+  const fzRaw = r.fund.z ?? 0, fv = r.fund.val ?? 0, lz = r.ls?.z ?? 0;
+  r.fundv = fv > 0.0003 || (fzRaw > 2 && fv > 0.0001) ? { txt: "aşırı yüksek", cls: "c-info" }
+    : fzRaw > 1 && fv > 0 ? { txt: "yüksek", cls: "c-neutral" }
+    : fv < -0.0002 || (fzRaw < -2 && fv < -0.0001) ? { txt: "aşırı negatif", cls: "c-info" }
+    : fzRaw < -1 ? { txt: fv < 0 ? "hafif negatif" : "düşük", cls: "c-neutral" } : { txt: "normal", cls: "c-neutral" };
+  r.lsv = !r.ls ? { txt: "veri yok", cls: "c-neutral" } : lz > 1.5 ? { txt: "long ağır", cls: "c-info" } : lz < -1.5 ? { txt: "short ağır", cls: "c-info" } : { txt: "dengeli", cls: "c-neutral" };
+
+  // likidasyon hücresi: kırmızı = tasfiye olan longlar (satış), yeşil = tasfiye olan shortlar (alış)
+  if (r.liq) {
+    const tot = r.liq.long + r.liq.short, lshare = tot ? r.liq.long / tot : 0.5, lq = r.liq.z ?? 0;
+    r.liqv = lq > 1.5 && lshare > 0.65 ? { txt: "long tasfiyesi yoğun", cls: "c-dn1" }
+      : lq > 1.5 && lshare < 0.35 ? { txt: "short tasfiyesi yoğun", cls: "c-up1" }
+      : lq > 1.5 ? { txt: "iki yönlü tasfiye", cls: "c-info" } : { txt: "normal", cls: "c-neutral" };
+  } else r.liqv = { txt: "veri yok", cls: "c-neutral" };
+}
+
+// ---------- çizim ----------
+function cell(cls, main, sub, title) {
+  return `<td class="${cls}"${title ? ` title="${esc(title)}"` : ""}>${esc(main)}${sub ? ` <small>${esc(sub)}</small>` : ""}</td>`;
+}
+function renderRows(rows) {
+  $("rows").innerHTML = rows.map(r => {
+    const pcls = r.dir === "up" ? "c-up1" : r.dir === "down" ? "c-dn1" : "c-neutral";
+    return `<tr>
+      <td class="tf">${esc(TFS[r.tf].label)}</td>
+      ${cell(pcls, fmtPct(r.pChg), "(" + fmtZ(r.pZ) + ")")}
+      ${cell(r.reg.cls, r.reg.txt, r.oi ? "(OI " + fmtPct(r.oi.val) + ")" : "", r.oi ? "OI kaynakları: " + r.oi.names.join(", ") + " · " + fmtZ(r.oi.z) : "")}
+      ${cell(r.tkv.cls, r.tkv.txt, r.tk ? "(%" + (r.tk.val * 100).toFixed(0) + " alış)" : "", r.tk ? "Kaynaklar: " + r.tk.names.join(", ") + " · " + fmtZ(r.tk.z) : "")}
+      ${cell(r.sv.cls, r.sv.txt, "", r.spot ? `Spot net akış ${fmtZ(r.spot.z)} · vadeli taker ${fmtZ(r.tk?.z)}` : "")}
+      ${cell(r.fundv.cls, r.fundv.txt, "(" + fmtFund(r.fund.val) + " · " + fmtZ(r.fund.z) + ")", r.tf === "1d" ? "Son 24 saatin ortalaması, 8 saatlik eşdeğer" : "Anlık, 8 saatlik eşdeğer")}
+      ${cell(r.lsv.cls, r.lsv.txt, r.ls ? "(" + fmtZ(r.ls.z) + ")" : "", r.ls ? "Kaynaklar: " + r.ls.names.join(", ") : "")}
+      ${cell(r.liqv.cls, r.liqv.txt, r.liq ? `(L ${fmtUsd(r.liq.long)} / S ${fmtUsd(r.liq.short)})` : "", r.liq ? "Kaynaklar: " + r.liq.names.join(", ") + " · son 3 mum · " + fmtZ(r.liq.z) : "")}
+    </tr>`;
+  }).join("");
+}
+
+function renderStats(d, W, FM) {
+  const sp = d.per["1h"].spot;
+  const price = sp ? last(sp).c : d.hl?.px;
+  const p24 = sp && sp.length > 24 ? price / sp[sp.length - 25].c - 1 : null;
+  const totBtc = Object.values(W).reduce((a, x) => a + x, 0);
+  const g = d.per["1h"].gate, oiSrc = [];
+  if (g) oiSrc.push(["Gate", g.map(x => x.open_interest), W.gate]);
+  for (const [k, s] of Object.entries(d.per["1h"].czOI || {})) oiSrc.push([CZN[k], s, W[CZW[k]]]);
+  const ch24 = oiSrc.filter(([, s]) => s.length > 25).map(([n, s, w]) => [n, s[s.length - 1] / s[s.length - 25] - 1, w || 1]);
+  const oi24 = ch24.length ? ch24.reduce((a, [, c, w]) => a + c * w, 0) / ch24.reduce((a, [, , w]) => a + w, 0) : null;
+  const nSrc = Object.values(W).filter(x => x > 0).length;
+  const st = [
+    ["BTC fiyatı", price ? "$" + price.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "–", "24s " + fmtPct(p24), p24],
+    ["Toplam açık pozisyon", fmtUsd(totBtc * price), totBtc.toLocaleString("tr-TR", { maximumFractionDigits: 0 }) + " BTC · " + nSrc + " borsa", null],
+    ["OI 24s değişim", fmtPct(oi24), ch24.map(x => x[0]).join(", ") || "veri yok", oi24],
+    ["Birleşik funding (8s)", fmtFund(FM.cur), FM.names.length + " borsa · yıllık " + (FM.cur != null ? (FM.cur * 3 * 365 * 100).toFixed(1) + "%" : "–"), null],
+  ];
+  $("stats").innerHTML = st.map(([k, v, s, sign]) => `<div class="stat"><div class="k">${esc(k)}</div><div class="v ${sign > 0 ? "pos" : sign < 0 ? "neg" : ""}">${esc(v)}</div><div class="s">${esc(s)}</div></div>`).join("");
+}
+
+function renderSources() {
+  const chips = Object.values(SRC).map(s => {
+    const parts = Object.entries(s.parts), ok = parts.filter(([, v]) => v).length;
+    const cls = !parts.length ? "" : ok === parts.length ? "ok" : ok ? "part" : "off";
+    const label = !parts.length ? "bekleniyor" : ok === parts.length ? "aktif" : ok ? "kısmi" : "erişilemiyor";
+    const tip = parts.map(([k, v]) => (v ? "✓ " : "✗ ") + k).join("\n");
+    return `<span class="chip" title="${esc(tip)}"><span class="dot ${cls}"></span>${esc(s.name)} · ${label}</span>`;
+  });
+  for (const [k, v] of Object.entries(WSS)) chips.push(`<span class="chip"><span class="dot ${v === "bağlı" ? "ok" : "off"}"></span>${esc(k)} canlı akış · ${esc(v)}</span>`);
+  $("sources").innerHTML = chips.join("");
+  const bnOff = Object.keys(SRC.binance.parts).length && !Object.values(SRC.binance.parts).some(Boolean);
+  const byOff = Object.keys(SRC.bybit.parts).length && !Object.values(SRC.bybit.parts).some(Boolean);
+  $("srcnote").textContent = "Noktaların üzerine gelince hangi verinin alınabildiği görünür. Bir borsaya ulaşılamazsa panel kalan borsalarla hesaplamaya devam eder.";
+  const ab = $("alertbox");
+  if (bnOff || byOff) {
+    ab.hidden = false; ab.className = "alert";
+    ab.textContent = location.protocol === "file:"
+      ? `${[bnOff && "Binance", byOff && "Bybit"].filter(Boolean).join(" ve ")} verisi alınamıyor. Coinalyze bağlantısı için paneli dosyaya çift tıklayarak değil, klasördeki "Vadeli Pusula.bat" ile aç.`
+      : CZ_ON === false
+        ? `${[bnOff && "Binance", byOff && "Bybit"].filter(Boolean).join(" ve ")} verisi alınamıyor. Coinalyze anahtarı bulunamadı: klasördeki coinalyze-key.txt dosyasını kontrol et.`
+        : `${[bnOff && "Binance", byOff && "Bybit"].filter(Boolean).join(" ve ")} verisi şu an Coinalyze'dan alınamadı (dakikalık sorgu sınırı dolmuş olabilir). Panel bir sonraki yenilemede tekrar deneyecek.`;
+  } else ab.hidden = true;
+}
+
+// ---------- tarihsel katman ----------
+// Kaldıraç oranı = toplam vadeli OI (BTC) / dolaşımdaki BTC arzı. Fiyat etkisinden ve piyasa büyüklüğünden arındırılmış ölçü.
+// Tutarlılık için yalnızca tüm dönem boyunca verisi olan büyük borsalar kullanılır (Binance, Bybit, OKX, Deribit; USDT ve coin-margined).
+const HIST_SYMS = "BTCUSDT_PERP.A,BTCUSD_PERP.A,BTCUSDT.6,BTCUSD.6,BTCUSDT_PERP.3,BTCUSD_PERP.3,BTC-PERPETUAL.2";
+const HIST_STORE = "vadeli-pusula-gecmis-v1", HIST_TTL = 6 * 3600e3;
+const HIST_WIN = 365, FWD = 14, BIG = 0.10;   // geçmiş testi: sonraki 14 günde ≥%10 hareket (en anlamlı sonucu bu ufuk verdi)
+function btcSupply(t) {      // yarılanma takvimine göre yaklaşık arz (blok başına ödül × günde ~144 blok)
+  const H3 = 1589155200, H4 = 1713571200, day = 86400;
+  if (t < H3) return 18375000 - 1800 * (H3 - t) / day;
+  if (t < H4) return 18375000 + 900 * (t - H3) / day;
+  return 19687500 + 450 * (t - H4) / day;
+}
+async function loadHistory() {
+  try { const c = JSON.parse(localStorage.getItem(HIST_STORE)); if (c && Date.now() - c.at < HIST_TTL && c.data.length > 400) return c.data; } catch (e) {}
+  if (!(await czAvailable())) return null;
+  const now = Math.floor(Date.now() / 1000), from = now - 1700 * 86400;
+  const [oi, px] = await Promise.all([
+    tryGet("coinalyze", "uzun OI geçmişi", () => czGet("histOI", `open-interest-history?symbols=${HIST_SYMS}&interval=daily&from=${from}&to=${now}&convert_to_usd=true`, HIST_TTL)),
+    tryGet("coinalyze", "uzun fiyat geçmişi", () => czGet("histPX", `ohlcv-history?symbols=${CZ.bn}&interval=daily&from=${from}&to=${now}`, HIST_TTL)),
+  ]);
+  if (!oi || !px || !px[0]) return null;
+  const pmap = new Map(px[0].history.map(x => [x.t, x]));
+  const sum = new Map(), cnt = new Map();
+  for (const s of oi) for (const x of s.history || []) { sum.set(x.t, (sum.get(x.t) || 0) + x.c); cnt.set(x.t, (cnt.get(x.t) || 0) + 1); }
+  const data = [...sum.keys()].filter(t => cnt.get(t) === oi.length && pmap.has(t)).sort((a, b) => a - b)
+    .map(t => { const p = pmap.get(t); return { t, c: p.c, h: p.h, l: p.l, oi: sum.get(t) }; });
+  try { localStorage.setItem(HIST_STORE, JSON.stringify({ at: Date.now(), data })); } catch (e) {}
+  return data;
+}
+
+function analyzeHistory(H) {
+  const n = H.length;
+  const lev = H.map(d => d.oi / d.c / btcSupply(d.t));
+  const rng = H.map((d, i) => { if (i < 13) return null; let hi = -Infinity, lo = Infinity;
+    for (let j = i - 13; j <= i; j++) { hi = Math.max(hi, H[j].h); lo = Math.min(lo, H[j].l); } return (hi - lo) / d.c; });
+  const pctOf = (arr, x) => { if (!arr.length) return null; let b = 0; for (const v of arr) if (v < x) b++; return 100 * b / arr.length; };
+  const oiB = H.map(d => d.oi / d.c), oi7 = oiB.map((v, i) => i >= 7 ? v / oiB[i - 7] - 1 : null);
+  const levP = [], rngP = [], oi7P = [], p90 = [];
+  for (let i = HIST_WIN; i < n; i++) {
+    const past = lev.slice(i - HIST_WIN, i);
+    levP[i] = pctOf(past, lev[i]);
+    const s = [...past].sort((a, b) => a - b); p90[i] = s[Math.floor(0.9 * (s.length - 1))];
+    const pr = rng.slice(i - HIST_WIN, i).filter(v => v != null);
+    rngP[i] = rng[i] != null ? pctOf(pr, rng[i]) : null;
+    oi7P[i] = pctOf(oi7.slice(i - HIST_WIN, i).filter(v => v != null), oi7[i]);
+  }
+  const fwdMax = [], fwdRet = [];
+  for (let i = 0; i + FWD < n; i++) {
+    let m = 0; for (let j = i + 1; j <= i + FWD; j++) m = Math.max(m, H[j].h / H[i].c - 1, 1 - H[j].l / H[i].c);
+    fwdMax[i] = m; fwdRet[i] = H[i + FWD].c / H[i].c - 1;
+  }
+  const stat = idx => {
+    const v = idx.filter(i => fwdMax[i] != null);
+    if (!v.length) return { n: 0, ep: 0 };
+    const m = v.map(i => fwdMax[i]).sort((a, b) => a - b);
+    let ep = 0, prev = -1e9; for (const i of v) { if (i - prev > FWD) ep++; prev = i; }
+    return { n: v.length, ep, med: m[Math.floor(m.length / 2)], big: v.filter(i => fwdMax[i] >= BIG).length / v.length, up: v.filter(i => fwdRet[i] > 0).length / v.length };
+  };
+  const valid = []; for (let i = 0; i < n; i++) if (levP[i] != null) valid.push(i);
+  const LB = [[0, 50, "%50 altı"], [50, 80, "%50–80"], [80, 90, "%80–90"], [90, 95, "%90–95"], [95, 101, "%95 üstü"]];
+  const OB = [[0, 10, "hızlı düşüş (en alt %10)"], [10, 50, "düşüş / yatay"], [50, 80, "artış"], [80, 90, "güçlü artış"], [90, 101, "çok hızlı artış (en üst %10)"]];
+  const levBins = LB.map(([a, b, label]) => ({ label, a, b, ...stat(valid.filter(i => levP[i] >= a && levP[i] < b)) }));
+  const oiBins = OB.map(([a, b, label]) => ({ label, a, b, ...stat(valid.filter(i => oi7P[i] != null && oi7P[i] >= a && oi7P[i] < b)) }));
+  const combo = stat(valid.filter(i => levP[i] >= 80 && oi7P[i] >= 80));
+  const tight = stat(valid.filter(i => rngP[i] != null && rngP[i] <= 10));
+  const base = stat(valid);
+  const i = n - 1;
+  const cur = { lev: lev[i], levP: levP[i], levPall: pctOf(lev.slice(0, i), lev[i]), oi7: oi7[i], oi7P: oi7P[i] };
+  return { H, lev, p90, cur, levBins, oiBins, combo, tight, base, since: H[0].t };
+}
+
+function sharpMoveWarning(A, rows) {
+  const c = A.cur;
+  let s = 0; const why = [];
+  // Geçmiş testinde etki ancak %90 diliminin üstünde belirgin (%80–90 dilimi ortalamanın altında kaldı)
+  if (c.levP >= 95) s += 2; else if (c.levP >= 90) s += 1.5;
+  if (c.levP >= 90) why.push(`kaldıraç son 1 yılın %${Math.round(c.levP)}'lik diliminde`);
+  else if (c.levP >= 80) why.push(`kaldıraç yüksek (%${Math.round(c.levP)}) ama henüz kritik eşiğin (%90) altında`);
+  if (c.levP >= 80 && c.oi7P >= 80) { s += 0.75; why.push("OI son 7 günde hızla artmış"); }
+  if (c.oi7P != null && c.oi7P <= 10) { s -= 0.5; why.push("OI hızla düşüyor, kaldıraç temizleniyor"); }
+  const L = s < 1 ? ["Normal", "c-neutral"] : s < 2 ? ["Dikkat", "c-info"] : s < 3 ? ["Yüksek", "c-warn"] : ["Kritik", "c-dn2"];
+  return { level: L[0], cls: L[1], why: why.length ? why.join(" · ") : "kaldıraç olağan seviyelerde" };
+}
+
+const pc0 = x => x == null ? "–" : "%" + Math.round(x * 100);
+function binTable(title, bins, curVal, base) {
+  const rowsHtml = bins.map(b => `<tr class="${curVal != null && curVal >= b.a && curVal < b.b ? "now" : ""}"><td>${esc(b.label)}${curVal != null && curVal >= b.a && curVal < b.b ? " ← şu an" : ""}</td>
+    <td>${b.n}</td><td>${b.ep}</td><td>${b.n ? pc0(b.med) : "–"}</td><td>${b.n ? pc0(b.big) : "–"}</td></tr>`).join("");
+  return `<div><table class="bt"><caption>${esc(title)}</caption>
+    <thead><tr><th>Dilim</th><th>Gün</th><th>Dönem</th><th>Medyan hareket</th><th>≥%${BIG * 100} hareket</th></tr></thead>
+    <tbody>${rowsHtml}<tr class="base"><td>Tüm günler</td><td>${base.n}</td><td>–</td><td>${pc0(base.med)}</td><td>${pc0(base.big)}</td></tr></tbody></table></div>`;
+}
+
+function drawHistChart(A) {
+  const W = 800, Hh = 230, pl = 46, pr = 58, pt = 10, pb = 24, n = A.H.length;
+  const x = i => pl + (W - pl - pr) * i / (n - 1);
+  const lv = A.lev, lmin = Math.min(...lv) * 0.95, lmax = Math.max(...lv) * 1.05;
+  const y1 = v => pt + (Hh - pt - pb) * (1 - (v - lmin) / (lmax - lmin));
+  const px = A.H.map(d => d.c), pmin = Math.min(...px) * 0.95, pmax = Math.max(...px) * 1.05;
+  const y2 = v => pt + (Hh - pt - pb) * (1 - (v - pmin) / (pmax - pmin));
+  const path = (arr, y) => { let s = "", on = false; arr.forEach((v, i) => { if (v == null) { on = false; return; } s += (on ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1); on = true; }); return s; };
+  let g = "";
+  for (let k = 0; k <= 4; k++) { const v = lmin + (lmax - lmin) * k / 4, yy = y1(v);
+    g += `<line class="grid" x1="${pl}" x2="${W - pr}" y1="${yy}" y2="${yy}"/><text class="ax" x="${pl - 6}" y="${yy + 3.5}" text-anchor="end">${(v * 100).toFixed(2)}%</text>`;
+    const pv = pmin + (pmax - pmin) * k / 4; g += `<text class="ax" x="${W - pr + 6}" y="${y2(pv) + 3.5}">$${Math.round(pv / 1000)}K</text>`; }
+  let lastYear = null;
+  A.H.forEach((d, i) => { const yr = new Date(d.t * 1000).getUTCFullYear(); if (lastYear !== null && yr !== lastYear) g += `<text class="ax" x="${x(i)}" y="${Hh - 6}" text-anchor="middle">${yr}</text><line class="grid" x1="${x(i)}" x2="${x(i)}" y1="${pt}" y2="${Hh - pb}"/>`; lastYear = yr; });
+  const last = n - 1;
+  return `<div class="legend"><span><i style="border-color:var(--info)"></i>Kaldıraç oranı (OI / BTC arzı, sol eksen)</span><span><i style="border-color:var(--warn);border-top-style:dashed"></i>Son 1 yılın %90'lık eşiği</span><span><i style="border-color:var(--muted)"></i>BTC fiyatı (sağ eksen)</span></div>
+    <svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Kaldıraç oranı ve BTC fiyatı">${g}
+    <path d="${path(px, y2)}" fill="none" style="stroke:var(--muted)" stroke-width="1.2" opacity=".55"/>
+    <path d="${path(A.p90, y1)}" fill="none" style="stroke:var(--warn)" stroke-width="1.4" stroke-dasharray="5 4"/>
+    <path d="${path(lv, y1)}" fill="none" style="stroke:var(--info)" stroke-width="1.8"/>
+    <circle cx="${x(last)}" cy="${y1(lv[last])}" r="4" style="fill:var(--info);stroke:var(--panel)" stroke-width="2"/></svg>`;
+}
+
+let HA = null, HA_KEY = "";
+async function refreshHistory(rows) {
+  const H = await loadHistory();
+  if (!H) { $("histcards").innerHTML = `<p class="empty">Tarihsel katman için Coinalyze bağlantısı gerekiyor. Paneli "Vadeli Pusula.bat" ile aç.</p>`; return; }
+  SRC.coinalyze.parts["uzun geçmiş"] = true;
+  const key = H.length + "|" + last(H).t + "|" + last(H).oi;
+  if (key !== HA_KEY) { HA = analyzeHistory(H); HA_KEY = key; $("histchart").innerHTML = drawHistChart(HA); }
+  const A = HA, c = A.cur, w = sharpMoveWarning(A, rows);
+  const since = new Date(A.since * 1000).toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
+  const curBin = A.levBins.find(b => c.levP >= b.a && c.levP < b.b);
+  $("histcards").innerHTML = `
+    <div class="hcard"><div class="k">Sert hareket uyarısı</div><div class="v"><span class="pill ${w.cls}">${esc(w.level)}</span></div><div class="s">${esc(w.why)}</div></div>
+    <div class="hcard"><div class="k">Kaldıraç oranı (OI / BTC arzı)</div><div class="v">${(c.lev * 100).toFixed(2)}%</div>
+      <div class="s">Son 1 yılın %${Math.round(c.levP)}'lik diliminde · ${esc(since)}'den beri %${Math.round(c.levPall)}</div></div>
+    <div class="hcard"><div class="k">OI değişimi (son 7 gün, BTC cinsinden)</div><div class="v">${fmtPct(c.oi7, 1)}</div>
+      <div class="s">${c.oi7P == null ? "" : `Son 1 yılın %${Math.round(c.oi7P)}'lik diliminde`}</div></div>
+    <div class="hcard"><div class="k">Geçmişte bu kaldıraç diliminde</div><div class="v">${curBin && curBin.n ? pc0(curBin.big) : "–"}</div>
+      <div class="s">günlerin ardından ${FWD} gün içinde ≥%${BIG * 100} hareket geldi (tüm günlerde ${pc0(A.base.big)} · ${curBin ? curBin.ep : 0} bağımsız dönem)</div></div>`;
+  $("histtables").innerHTML = binTable(`Kaldıraç dilimine göre sonraki ${FWD} gün`, A.levBins, c.levP, A.base)
+    + binTable(`OI'nin 7 günlük değişimine göre sonraki ${FWD} gün`, A.oiBins, c.oi7P, A.base);
+  $("histnote").textContent = `Veri: ${since}'den bugüne Binance, Bybit, OKX ve Deribit'in günlük toplam OI'si (Coinalyze). Dilimler her gün için yalnızca o güne kadarki son 365 güne göre hesaplanır, yani geleceğe bakan bir hile yoktur. "Medyan hareket": sonraki ${FWD} gün içinde fiyatın herhangi bir yöne en fazla ne kadar uzaklaştığı (ortanca). "Dönem": birbirinden en az ${FWD} gün ayrı başlayan bağımsız dönem sayısı. Gün sayıları örtüşen pencereler içerdiği için asıl örnek büyüklüğü dönem sayısıdır. Kaldıraç ≥%80 ve OI hızla artarken: ${A.combo.n} gün, ${A.combo.ep} dönem, ≥%${BIG * 100} hareket oranı ${pc0(A.combo.big)}. Fiyatın dar aralıkta sıkışması bu dönemde sert hareketin habercisi olmadı (en dar %10'luk dilimde oran ${pc0(A.tight.big)}), bu yüzden uyarıya dahil edilmedi. Bu oranlar yönü değil, hareketin büyüklüğünü ölçer.`;
+}
+
+// ---------- canlı likidasyon ----------
+const LIQ = [], seen = new Set();
+function addLiq(ev) {
+  if (!ev.btc || !ev.px) return;
+  ev.usd = ev.btc * ev.px;
+  const key = ev.ex + "|" + ev.t + "|" + ev.btc.toFixed(4);
+  if (seen.has(key)) return;
+  seen.add(key); LIQ.push(ev);
+  LIQ.sort((a, b) => b.t - a.t);
+  if (LIQ.length > 400) LIQ.length = 400;
+  scheduleLiqRender();
+}
+let liqTimer = null;
+function scheduleLiqRender() { if (!liqTimer) liqTimer = setTimeout(() => { liqTimer = null; renderLiq(); }, 300); }
+function renderLiq() {
+  const now = Date.now(), win = LIQ.filter(e => now - e.t < 3600e3);
+  const L = win.filter(e => e.side === "long").reduce((a, e) => a + e.usd, 0), S = win.filter(e => e.side === "short").reduce((a, e) => a + e.usd, 0);
+  $("liqsum").innerHTML = `<span>Son 1 saat: <b class="neg num">Long ${fmtUsd(L)}</b></span><span><b class="pos num">Short ${fmtUsd(S)}</b></span><span class="empty">${win.length} işlem</span>`;
+  const items = LIQ.filter(e => e.usd >= 1000).slice(0, 40);
+  $("feed").innerHTML = items.length ? items.map(e => `<li class="${e.usd >= 250e3 ? "big" : ""}">
+      <span class="num">${fmtTime(e.t)}</span><span>${esc(e.ex)}</span>
+      <span class="side-${e.side}">${e.side === "long" ? "LONG tasfiye" : "SHORT tasfiye"}</span>
+      <span class="num">${fmtUsd(e.usd)} @ ${Math.round(e.px).toLocaleString("en-US")}</span></li>`).join("")
+    : `<li class="empty">Son bir saatte kayıt yok. Yeni likidasyonlar geldikçe burada görünecek.</li>`;
+}
+function connectWS(name, url, onOpen, onMsg, ping) {
+  let retry = 2000;
+  const go = () => {
+    let ws, pt;
+    try { ws = new WebSocket(url); } catch (e) { WSS[name] = "bağlantı yok"; return; }
+    ws.onopen = () => { retry = 2000; WSS[name] = "bağlı"; renderSources(); onOpen && onOpen(ws); if (ping) pt = setInterval(() => { try { ping(ws); } catch (e) {} }, 20000); };
+    ws.onmessage = m => { try { onMsg(m.data); } catch (e) {} };
+    ws.onclose = () => { clearInterval(pt); WSS[name] = "bağlantı yok"; renderSources(); setTimeout(go, retry); retry = Math.min(retry * 2, 60000); };
+    ws.onerror = () => { try { ws.close(); } catch (e) {} };
+  };
+  go();
+}
+function startStreams() {
+  connectWS("OKX", "wss://ws.okx.com:443/ws/v5/public",
+    ws => ws.send(JSON.stringify({ op: "subscribe", args: [{ channel: "liquidation-orders", instType: "SWAP" }] })),
+    raw => { if (raw === "pong") return; const j = JSON.parse(raw); (j.data || []).forEach(d => {
+      if (d.instId !== "BTC-USDT-SWAP" && d.instFamily !== "BTC-USDT") return;
+      (d.details || []).forEach(x => addLiq({ ex: "OKX", t: +x.ts, side: x.side === "sell" ? "long" : "short", btc: +x.sz * 0.01, px: +x.bkPx })); }); },
+    ws => ws.send("ping"));
+  connectWS("Bybit", "wss://stream.bybit.com/v5/public/linear",
+    ws => ws.send(JSON.stringify({ op: "subscribe", args: ["allLiquidation.BTCUSDT"] })),
+    raw => { const j = JSON.parse(raw); if (!Array.isArray(j.data)) return;
+      j.data.forEach(x => addLiq({ ex: "Bybit", t: +x.T, side: x.S === "Buy" ? "long" : "short", btc: +x.v, px: +x.p })); },
+    ws => ws.send(JSON.stringify({ op: "ping" })));
+  connectWS("Binance", "wss://fstream.binance.com/ws/btcusdt@forceOrder", null,
+    raw => { const o = JSON.parse(raw).o; if (!o) return;
+      addLiq({ ex: "Binance", t: +o.T, side: o.S === "SELL" ? "long" : "short", btc: +(o.z || o.q), px: +(o.ap || o.p) }); });
+}
+
+// ---------- ana döngü ----------
+let busy = false;
+async function refresh() {
+  if (busy) return; busy = true;
+  $("updated").textContent = "Güncelleniyor…";
+  try {
+    const d = await loadAll(); D = d;
+    const W = weights(d), FM = fundingModel(d, W);
+    const rows = ORDER.map(tf => computeRow(tf, d, W, FM));
+    renderStats(d, W, FM); renderRows(rows);
+    try { await refreshHistory(rows); } catch (e) { console.error(e); }
+    (d.okxLiq || []).forEach(addLiq);
+    $("updated").textContent = "Son güncelleme " + fmtTime(Date.now()) + " · her dakika yenilenir";
+  } catch (e) {
+    console.error(e);
+    $("updated").textContent = "Güncelleme başarısız, 1 dakika sonra tekrar denenecek";
+  } finally { renderSources(); renderLiq(); busy = false; }
+}
+$("refresh").addEventListener("click", refresh);
+refresh();
+startStreams();
+setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>
